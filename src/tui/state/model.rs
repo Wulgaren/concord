@@ -66,6 +66,7 @@ pub struct AttachmentDownloadProgressView {
 pub enum MessageActionKind {
     CopyContent,
     OpenReactionPicker,
+    QuickReact,
     Reply,
     OpenDeleteConfirmation,
     Edit,
@@ -84,7 +85,7 @@ pub enum MessageActionKind {
 impl MessageActionKind {
     pub(crate) const fn discord_action(self) -> Option<DiscordAction> {
         match self {
-            Self::OpenReactionPicker => Some(DiscordAction::AddReaction),
+            Self::OpenReactionPicker | Self::QuickReact => Some(DiscordAction::AddReaction),
             Self::Reply => Some(DiscordAction::SendMessage),
             Self::OpenDeleteConfirmation => Some(DiscordAction::DeleteMessage),
             Self::Edit => Some(DiscordAction::EditMessage),

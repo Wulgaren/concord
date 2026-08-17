@@ -990,6 +990,7 @@ impl KeyBindings {
         vec![char_chord(match kind {
             MessageActionKind::CopyContent => 'y',
             MessageActionKind::OpenReactionPicker => 'r',
+            MessageActionKind::QuickReact => 'n',
             MessageActionKind::Reply => 'R',
             MessageActionKind::OpenDeleteConfirmation => 'd',
             MessageActionKind::Edit => 'e',

@@ -60,6 +60,7 @@ fn message_action_items_reflect_message_and_channel_capabilities() {
         vec![
             MessageActionKind::CopyContent,
             MessageActionKind::OpenReactionPicker,
+            MessageActionKind::QuickReact,
             MessageActionKind::Reply,
             MessageActionKind::OpenDeleteConfirmation,
             MessageActionKind::Edit,
@@ -114,6 +115,7 @@ fn message_action_items_reflect_message_and_channel_capabilities() {
     let actions = onboarding.selected_message_action_items();
     for kind in [
         MessageActionKind::OpenReactionPicker,
+        MessageActionKind::QuickReact,
         MessageActionKind::Reply,
         MessageActionKind::OpenDeleteConfirmation,
         MessageActionKind::Edit,

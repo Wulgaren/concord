@@ -7,8 +7,9 @@ use crate::tui::fuzzy::{FuzzyScore, fuzzy_text_score};
 use crate::tui::keybindings::SelectionAction;
 
 use super::super::emoji::{
-    custom_emoji_can_be_used_directly, custom_emoji_reaction_item, is_quick_unicode_emoji,
-    quick_unicode_emoji_reaction_items, remaining_unicode_emoji_reaction_items,
+    custom_emoji_can_be_used_directly, custom_emoji_reaction_item, effective_quick_unicode_emojis,
+    is_quick_unicode_emoji, quick_unicode_emoji_reaction_items,
+    remaining_unicode_emoji_reaction_items,
 };
 use super::super::{
     DashboardState, EmojiReactionItem, EmojiReactionPickerState, ReactionUsersPopupState,
@@ -32,7 +33,8 @@ impl DashboardState {
         &self,
         guild_id: Option<Id<GuildMarker>>,
     ) -> Vec<EmojiReactionItem> {
-        let mut items = quick_unicode_emoji_reaction_items();
+        let favorites = &self.options.reaction_options.favorite_emojis;
+        let mut items = quick_unicode_emoji_reaction_items(favorites);
 
         if let Some(guild_id) = guild_id {
             items.extend(
@@ -82,9 +84,13 @@ impl DashboardState {
             );
         }
 
-        items.extend(remaining_unicode_emoji_reaction_items());
+        items.extend(remaining_unicode_emoji_reaction_items(favorites));
 
         items
+    }
+
+    pub(in crate::tui) fn effective_quick_reaction_emojis(&self) -> Vec<String> {
+        effective_quick_unicode_emojis(&self.options.reaction_options.favorite_emojis)
     }
 
     pub fn filtered_emoji_reaction_items(&self) -> Vec<EmojiReactionItem> {
@@ -97,7 +103,11 @@ impl DashboardState {
             return items;
         };
 
-        filter_emoji_reaction_items(items, filter)
+        filter_emoji_reaction_items(
+            items,
+            filter,
+            &self.options.reaction_options.favorite_emojis,
+        )
     }
 
     pub fn filtered_emoji_reaction_items_slice(&self) -> Option<&[EmojiReactionItem]> {
@@ -285,6 +295,37 @@ impl DashboardState {
         Some(command)
     }
 
+    pub fn quick_react_selected_message(&mut self) -> Option<AppCommand> {
+        let message = self.selected_message_state()?;
+        if !self.can_open_reaction_picker(message) {
+            return None;
+        }
+        let emoji =
+            ReactionEmoji::Unicode(self.effective_quick_reaction_emojis().into_iter().next()?);
+        let channel_id = message.channel_id;
+        let message_id = message.id;
+        let already_reacted = message
+            .reactions
+            .iter()
+            .any(|existing| existing.me && existing.emoji == emoji);
+        if !already_reacted && !self.can_add_reaction_to_message(message, &emoji) {
+            return None;
+        }
+        Some(if already_reacted {
+            AppCommand::RemoveReaction {
+                channel_id,
+                message_id,
+                emoji,
+            }
+        } else {
+            AppCommand::AddReaction {
+                channel_id,
+                message_id,
+                emoji,
+            }
+        })
+    }
+
     pub fn activate_emoji_reaction_shortcut(&mut self, shortcut: char) -> Option<AppCommand> {
         let shortcut = shortcut.to_ascii_lowercase();
         let picker = self.popups.emoji_reaction_picker()?;
@@ -320,21 +361,25 @@ impl DashboardState {
     }
 
     pub fn push_emoji_reaction_filter_char(&mut self, value: char) {
+        let favorites = self.options.reaction_options.favorite_emojis.clone();
         if let Some(picker) = self.popups.emoji_reaction_picker_mut()
             && let Some(filter) = &mut picker.filter
         {
             filter.push(value);
-            picker.filtered_items = filter_emoji_reaction_items_from_slice(&picker.items, filter);
+            picker.filtered_items =
+                filter_emoji_reaction_items_from_slice(&picker.items, filter, &favorites);
             picker.selection.select(0);
         }
     }
 
     pub fn pop_emoji_reaction_filter_char(&mut self) {
+        let favorites = self.options.reaction_options.favorite_emojis.clone();
         if let Some(picker) = self.popups.emoji_reaction_picker_mut()
             && let Some(filter) = &mut picker.filter
         {
             filter.pop();
-            picker.filtered_items = filter_emoji_reaction_items_from_slice(&picker.items, filter);
+            picker.filtered_items =
+                filter_emoji_reaction_items_from_slice(&picker.items, filter, &favorites);
             picker.selection.select(0);
         }
     }
@@ -404,8 +449,9 @@ impl DashboardState {
 fn filter_emoji_reaction_items(
     items: Vec<EmojiReactionItem>,
     filter: &str,
+    favorites: &[String],
 ) -> Vec<EmojiReactionItem> {
-    filter_emoji_reaction_items_from_slice(&items, filter)
+    filter_emoji_reaction_items_from_slice(&items, filter, favorites)
 }
 
 fn prioritize_existing_reactions(
@@ -438,6 +484,7 @@ fn prioritize_existing_reactions(
 fn filter_emoji_reaction_items_from_slice(
     items: &[EmojiReactionItem],
     filter: &str,
+    favorites: &[String],
 ) -> Vec<EmojiReactionItem> {
     let filter = filter.trim();
     if filter.is_empty() {
@@ -450,7 +497,7 @@ fn filter_emoji_reaction_items_from_slice(
         .filter_map(|(index, item)| {
             emoji_reaction_filter_score(item, filter).map(|score| {
                 (
-                    usize::from(emoji_reaction_is_remaining_unicode(item)),
+                    usize::from(emoji_reaction_is_remaining_unicode(item, favorites)),
                     score,
                     index,
                     item.clone(),
@@ -465,8 +512,11 @@ fn filter_emoji_reaction_items_from_slice(
     scored.into_iter().map(|(_, _, _, item)| item).collect()
 }
 
-fn emoji_reaction_is_remaining_unicode(item: &EmojiReactionItem) -> bool {
-    matches!(&item.emoji, crate::discord::ReactionEmoji::Unicode(emoji) if !is_quick_unicode_emoji(emoji))
+fn emoji_reaction_is_remaining_unicode(item: &EmojiReactionItem, favorites: &[String]) -> bool {
+    matches!(
+        &item.emoji,
+        crate::discord::ReactionEmoji::Unicode(emoji) if !is_quick_unicode_emoji(emoji, favorites)
+    )
 }
 
 fn emoji_reaction_filter_score(item: &EmojiReactionItem, filter: &str) -> Option<FuzzyScore> {

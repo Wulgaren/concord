@@ -606,3 +606,96 @@ fn reaction_users_popup_opens_highlighted_reaction() {
     );
     assert!(state.is_active_modal_popup(crate::tui::state::ActiveModalPopupKind::ReactionUsers));
 }
+
+#[test]
+fn emoji_picker_uses_configured_favorite_emojis_at_top() {
+    let mut state = state_with_messages(1);
+    state.focus_pane(FocusPane::Messages);
+    state.apply_reaction_options(crate::config::ReactionOptions {
+        favorite_emojis: vec!["🔥".to_owned(), "💯".to_owned()],
+    });
+
+    let items = state.emoji_reaction_items();
+    assert_eq!(
+        items[..2]
+            .iter()
+            .map(|item| item.emoji.clone())
+            .collect::<Vec<_>>(),
+        vec![
+            ReactionEmoji::Unicode("🔥".to_owned()),
+            ReactionEmoji::Unicode("💯".to_owned()),
+        ]
+    );
+}
+
+#[test]
+fn quick_react_toggles_first_favorite_without_opening_picker() {
+    let mut state = state_with_messages(1);
+    state.focus_pane(FocusPane::Messages);
+    state.apply_reaction_options(crate::config::ReactionOptions {
+        favorite_emojis: vec!["🔥".to_owned(), "👍".to_owned()],
+    });
+
+    assert_eq!(
+        state.activate_message_action_kind(MessageActionKind::QuickReact),
+        Some(AppCommand::AddReaction {
+            channel_id: Id::new(2),
+            message_id: Id::new(1),
+            emoji: ReactionEmoji::Unicode("🔥".to_owned()),
+        })
+    );
+    assert!(
+        !state.is_active_modal_popup(crate::tui::state::ActiveModalPopupKind::EmojiReactionPicker)
+    );
+
+    state.push_event(latest_history_loaded(
+        Id::new(2),
+        vec![MessageInfo {
+            reactions: vec![ReactionInfo {
+                count: 1,
+                me: true,
+                ..ReactionInfo::test(ReactionEmoji::Unicode("🔥".to_owned()))
+            }],
+            ..message_info(Id::new(2), 1)
+        }],
+    ));
+    state.focus_pane(FocusPane::Messages);
+
+    assert_eq!(
+        state.activate_message_action_kind(MessageActionKind::QuickReact),
+        Some(AppCommand::RemoveReaction {
+            channel_id: Id::new(2),
+            message_id: Id::new(1),
+            emoji: ReactionEmoji::Unicode("🔥".to_owned()),
+        })
+    );
+}
+
+#[test]
+fn quick_react_defaults_to_first_built_in_quick_emoji() {
+    let mut state = state_with_messages(1);
+    state.focus_pane(FocusPane::Messages);
+
+    assert_eq!(
+        state.activate_message_action_kind(MessageActionKind::QuickReact),
+        Some(AppCommand::AddReaction {
+            channel_id: Id::new(2),
+            message_id: Id::new(1),
+            emoji: ReactionEmoji::Unicode("👍".to_owned()),
+        })
+    );
+}
+
+#[test]
+fn quick_react_requires_add_reactions_permission() {
+    let mut state = state_with_other_user_message_permissions(
+        PERM_VIEW_CHANNEL | PERM_READ_MESSAGE_HISTORY,
+        Vec::new(),
+    );
+    state.focus_pane(FocusPane::Messages);
+
+    assert_eq!(
+        state.activate_message_action_kind(MessageActionKind::QuickReact),
+        None
+    );
+}

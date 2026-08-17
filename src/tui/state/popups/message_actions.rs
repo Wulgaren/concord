@@ -83,6 +83,7 @@ impl DashboardState {
         [
             (MessageActionKind::CopyContent, "copy message"),
             (MessageActionKind::OpenReactionPicker, "react"),
+            (MessageActionKind::QuickReact, "quick react"),
             (MessageActionKind::Reply, "reply"),
             (MessageActionKind::OpenDeleteConfirmation, "delete message"),
             (MessageActionKind::Edit, "edit message"),
@@ -129,7 +130,7 @@ impl DashboardState {
                 .content
                 .is_none()
                 .then(|| "no message text".to_owned()),
-            MessageActionKind::OpenReactionPicker => {
+            MessageActionKind::OpenReactionPicker | MessageActionKind::QuickReact => {
                 if self.can_open_reaction_picker(message) {
                     return None;
                 }
@@ -540,6 +541,7 @@ impl DashboardState {
                 self.direct_open_selected_message_reaction_picker();
                 None
             }
+            MessageActionKind::QuickReact => self.quick_react_selected_message(),
             MessageActionKind::Reply => {
                 self.direct_reply_to_selected_message();
                 None

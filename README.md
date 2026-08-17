@@ -285,7 +285,8 @@ These shortcuts act on the selected message when the Messages pane is focused.
 | Key | Action                     |
 | --- | -------------------------- |
 | `y` | Copy message text          |
-| `r` | Add or remove a reaction   |
+| `r` | Open the reaction picker   |
+| `n` | Quick-react with favorite #1 |
 | `R` | Reply                      |
 | `d` | Delete                     |
 | `e` | Edit                       |
@@ -367,6 +368,12 @@ hour_format_24 = true
 [composer]
 # Send custom emoji your account cannot use directly as image links.
 emojis_as_links = false
+
+[reactions]
+# Up to 10 unicode emoji pinned at the top of the reaction picker.
+# The first entry is used by QuickReactMessage (default key: n).
+# When unset or empty, Concord uses the built-in quick reactions.
+# favorite_emojis = ["🔥", "👍", "❤️", "😂", "🎉", "😮", "😢", "🙏", "👀", "💯"]
 
 [presence]
 # Relay Rich Presence from local apps as your activity.
@@ -470,6 +477,7 @@ ResizePaneRight = { keys = ["<A-l>", "<A-right>"] }
 Quit = "q"
 CopyMessage = "y"
 ReactMessage = "r"
+QuickReactMessage = "n"
 ReplyMessage = "R"
 DeleteMessage = "d"
 EditMessage = "e"
@@ -517,6 +525,7 @@ ToggleMute = "u"
 [keymap.message_actions]
 CopyMessage = "y"
 ReactMessage = "r"
+QuickReactMessage = "n"
 ReplyMessage = "R"
 DeleteMessage = "d"
 EditMessage = "e"

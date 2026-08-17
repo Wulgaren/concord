@@ -91,6 +91,7 @@ define_ui_actions! {
     Quit => ("quit", &[&[Char('q')]], Some(DashboardAction::Quit)),
     CopyMessage => ("copy message", &[&[Char('y')]], None),
     ReactMessage => ("react", &[&[Char('r')]], None),
+    QuickReactMessage => ("quick react", &[&[Char('n')]], None),
     ReplyMessage => ("reply", &[&[Char('R')]], None),
     DeleteMessage => ("delete message", &[&[Char('d')]], None),
     EditMessage => ("edit message", &[&[Char('e')]], None),
@@ -164,6 +165,7 @@ macro_rules! define_message_action_bindings {
 define_message_action_bindings! {
     CopyContent => (CopyMessage, "CopyMessage"),
     OpenReactionPicker => (ReactMessage, "ReactMessage"),
+    QuickReact => (QuickReactMessage, "QuickReactMessage"),
     Reply => (ReplyMessage, "ReplyMessage"),
     OpenDeleteConfirmation => (DeleteMessage, "DeleteMessage"),
     Edit => (EditMessage, "EditMessage"),
