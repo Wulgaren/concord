@@ -252,8 +252,18 @@ objc2-video-toolbox = { version = "0.3.2", default-features = false, features = 
   "objc2-core-video",
 ], optional = true }
 
+# macOS 27 dyld rejects proc-macro dylibs after rustc `-C strip=debuginfo`
+# when MACOSX_DEPLOYMENT_TARGET is set (mis-aligned LINKEDIT). Keep stripping
+# the final binary; leave build/proc-macro units unstripped.
+# https://github.com/rust-lang/rust/issues/157750
+[profile.release.build-override]
+strip = "none"
+
 [profile.dist]
 inherits = "release"
 lto = true
 codegen-units = 1
 strip = true
+
+[profile.dist.build-override]
+strip = "none"
